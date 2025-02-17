@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
-import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
+import { ScheduleModule } from '@nestjs/schedule';
+import { UserCron } from './user.cron';
 
 @Module({
   controllers: [UserController],
-  providers: [UserService],
-  imports: [ConfigModule, HttpModule],
+  providers: [UserService, UserCron],
+  imports: [HttpModule, ScheduleModule],
 })
 export class UserModule {}

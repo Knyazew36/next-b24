@@ -14,16 +14,17 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  externalId String   @unique
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   name       String
   lastName   String @map("last_name")
   secondName String @map("second_name")
   birthDate  String @map("birth_date")
 
-  email        String
+  email        String @unique
   photo        String
   mobile       String
   workPosition String @map("work_position")
