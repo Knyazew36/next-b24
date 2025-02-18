@@ -9,4 +9,9 @@ export class UserController {
   findAll() {
     return this.userService.findAll();
   }
+
+  @Get('test')
+  test() {
+    return this.userService.fetchAndSaveUsers();
+  }
 }

@@ -5,6 +5,7 @@ import { UserModule } from './user/user.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { WorkgroupModule } from './workgroup/workgroup.module';
 import { SharedModule } from './shared/shared.module';
+import { SonetgroupModule } from './sonetgroup/sonetgroup.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { SharedModule } from './shared/shared.module';
     ScheduleModule.forRoot(),
     WorkgroupModule,
     SharedModule,
+    SonetgroupModule,
   ],
   controllers: [AppController],
   providers: [AppService],

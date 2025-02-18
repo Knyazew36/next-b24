@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { IUser } from './type/user.type';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
-import { User } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 
 @Injectable()
@@ -16,12 +15,22 @@ export class UserService {
 
   async fetchAndSaveUsers() {
     const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get?ADMIN_MODE=true&USER_TYPE=employee&ACTIVE=true`;
+
     try {
       const response = await lastValueFrom(
         this.httpService.get<{ result: IUser[] }>(apiUrl),
       );
 
+      if (!response.data?.result) {
+        throw new Error('Bitrix API did not return users');
+      }
+
       const users = this.extractUserFields(response.data.result);
+
+      await this.prisma.user.createMany({
+        data: users,
+        skipDuplicates: true,
+      });
 
       return users;
     } catch (error) {
@@ -34,22 +43,16 @@ export class UserService {
   }
 
   extractUserFields(userData: IUser[]) {
-    const users: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[] = [];
-
-    userData.forEach((user) => {
-      users.push({
-        name: user.NAME,
-        lastName: user.LAST_NAME,
-        secondName: user.SECOND_NAME,
-        birthDate: user.PERSONAL_BIRTHDAY,
-        externalId: user.ID,
-        email: user.EMAIL,
-        mobile: user.PERSONAL_MOBILE,
-        photo: user.PERSONAL_PHOTO,
-        workPosition: user.WORK_POSITION,
-      });
-    });
-
-    return users;
+    return userData.map((user) => ({
+      name: user.NAME || '',
+      lastName: user.LAST_NAME || '',
+      secondName: user.SECOND_NAME || null,
+      birthDate: user.PERSONAL_BIRTHDAY || null,
+      externalId: user.ID.toString(),
+      email: user.EMAIL || null,
+      mobile: user.PERSONAL_MOBILE || null,
+      photo: user.PERSONAL_PHOTO || null,
+      workPosition: user.WORK_POSITION || null,
+    }));
   }
 }

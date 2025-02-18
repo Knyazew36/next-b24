@@ -8,6 +8,6 @@ import { UserCron } from './user.cron';
 @Module({
   controllers: [UserController],
   providers: [UserService, UserCron],
-  imports: [HttpModule, ScheduleModule],
+  imports: [ScheduleModule],
 })
 export class UserModule {}
