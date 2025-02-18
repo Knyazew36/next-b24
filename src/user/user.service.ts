@@ -72,6 +72,7 @@ export class UserService {
       photo: user.PERSONAL_PHOTO || null,
       workPosition: user.WORK_POSITION || null,
       bitrixId: user.ID,
+      departamentIds: user.UF_DEPARTMENT || [],
     }));
   }
 }

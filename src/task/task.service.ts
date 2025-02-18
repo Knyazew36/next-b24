@@ -131,14 +131,14 @@ export class TaskService {
                   },
                 },
               },
-              // task: {
-              //   connectOrCreate: {
-              //     where: { bitrixId: item.TASK_ID },
-              //     create: {
-              //       bitrixId: item.TASK_ID,
-              //     },
-              //   },
-              // },
+              task: {
+                connectOrCreate: {
+                  where: { bitrixId: item.TASK_ID },
+                  create: {
+                    bitrixId: item.TASK_ID,
+                  },
+                },
+              },
             },
           }),
         ),

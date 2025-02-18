@@ -27,7 +27,7 @@ export class DepartmentService {
 
         const response = await lastValueFrom(
           this.httpService.post<{ result: IDepartment[] }>(resUrl, {
-            START: { start },
+            START: start,
           }),
         );
         if (!response.data?.result) {
@@ -44,20 +44,38 @@ export class DepartmentService {
         }
       }
 
-      await Promise.all(
-        all.map((item) =>
-          this.prisma.department.create({
-            data: {
-              bitrixId: item.ID,
-              name: item.NAME || '',
-              sort: item.SORT || null,
-              parent: item.PARENT || null,
-            },
-          }),
-        ),
-      );
+      const departments = all.map((item) => ({
+        bitrixId: item.ID,
+        name: item.NAME || '',
+        sort: item.SORT || null,
+        parent: item.PARENT || null,
+      }));
 
-      return 'done';
+      await this.prisma.department.createMany({
+        data: departments,
+        skipDuplicates: true,
+      });
+
+      const users = await this.prisma.user.findMany();
+
+      for (const user of users) {
+        if (!Array.isArray(user.departamentIds)) {
+          continue; // Если нет департаментов, пропускаем
+        }
+
+        const userDepartment = departments.find((dep) =>
+          user.departamentIds.includes(+dep.bitrixId),
+        );
+
+        if (userDepartment) {
+          await this.prisma.user.update({
+            where: { id: user.id },
+            data: { departamentIds: { set: [+userDepartment.bitrixId] } },
+          });
+        }
+      }
+
+      return departments;
     } catch (error) {
       throw new Error(`Error fetching departments: ${error.message}`);
     }

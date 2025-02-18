@@ -23,6 +23,8 @@ model User {
   mobile       String?
   workPosition String? @map("work_position")
 
+  departamentIds Int[] @default([])
+
   Department Department[]
   Tasks      Task[]
   WorkLog    ElapsedItem[]
