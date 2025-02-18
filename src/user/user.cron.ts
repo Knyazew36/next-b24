@@ -8,6 +8,6 @@ export class UserCron {
 
   @Cron('45 * * * * *')
   async updateUsers() {
-    await this.userService.fetchAndSaveUsers();
+    // await this.userService.fetchAndSaveUsers();
   }
 }

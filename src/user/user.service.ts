@@ -14,25 +14,44 @@ export class UserService {
   ) {}
 
   async fetchAndSaveUsers() {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get?ADMIN_MODE=true&USER_TYPE=employee&ACTIVE=true`;
-
+    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get?ADMIN_MODE=true`;
     try {
-      const response = await lastValueFrom(
-        this.httpService.get<{ result: IUser[] }>(apiUrl),
-      );
+      let start = 0;
+      let allUsers: IUser[] = [];
+      let hasMore = true;
 
-      if (!response.data?.result) {
-        throw new Error('Bitrix API did not return users');
+      while (hasMore) {
+        const restUrl = `${apiUrl}&start=${start}`;
+        const response = await lastValueFrom(
+          this.httpService.get<{ result: IUser[] }>(restUrl),
+        );
+
+        if (!response.data?.result) {
+          throw new Error('Bitrix API did not return users');
+        }
+
+        const users = response.data.result;
+        allUsers = [...allUsers, ...users];
+
+        if (users.length < 50) {
+          hasMore = false;
+        } else {
+          start += 50;
+        }
       }
 
-      const users = this.extractUserFields(response.data.result);
+      if (allUsers.length === 0) {
+        return [];
+      }
+
+      const formatUsers = this.extractUserFields(allUsers);
 
       await this.prisma.user.createMany({
-        data: users,
+        data: formatUsers,
         skipDuplicates: true,
       });
 
-      return users;
+      return formatUsers;
     } catch (error) {
       throw new Error(`Error fetching users: ${error.message}`);
     }
@@ -48,11 +67,11 @@ export class UserService {
       lastName: user.LAST_NAME || '',
       secondName: user.SECOND_NAME || null,
       birthDate: user.PERSONAL_BIRTHDAY || null,
-      externalId: user.ID.toString(),
       email: user.EMAIL || null,
       mobile: user.PERSONAL_MOBILE || null,
       photo: user.PERSONAL_PHOTO || null,
       workPosition: user.WORK_POSITION || null,
+      bitrixId: user.ID,
     }));
   }
 }

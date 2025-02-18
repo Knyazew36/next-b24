@@ -156,7 +156,7 @@ export interface IUser {
   UF_TIMEMAN: string;
 
   /** Departments - Отделы */
-  UF_DEPARTMENT: string;
+  UF_DEPARTMENT: string[];
 
   /** Interests - Интересы */
   UF_INTERESTS: string;
