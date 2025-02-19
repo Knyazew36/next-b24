@@ -8,6 +8,9 @@ import { SharedModule } from './shared/shared.module';
 import { SonetgroupModule } from './sonetgroup/sonetgroup.module';
 import { TaskModule } from './task/task.module';
 import { DepartmentModule } from './department/department.module';
+import { DepartmentService } from './department/department.service';
+import { UserService } from './user/user.service';
+import { TaskService } from './task/task.service';
 
 @Module({
   imports: [
@@ -20,6 +23,6 @@ import { DepartmentModule } from './department/department.module';
     DepartmentModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, DepartmentService, UserService, TaskService],
 })
 export class AppModule {}

@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
-import { ITask } from 'src/task/type/task.type';
 import { IDepartment } from './type/department.type';
 
 @Injectable()
@@ -30,6 +29,7 @@ export class DepartmentService {
             START: start,
           }),
         );
+
         if (!response.data?.result) {
           throw new Error('Bitrix API did not return departments');
         }
@@ -45,11 +45,13 @@ export class DepartmentService {
       }
 
       const departments = all.map((item) => ({
-        bitrixId: item.ID,
+        bitrixId: item.ID, // Приведение к числу
         name: item.NAME || '',
-        sort: item.SORT || null,
-        parent: item.PARENT || null,
+        sort: item.SORT ? +item.SORT : null,
+        parent: item.PARENT ? item.PARENT : null,
       }));
+
+      console.log('depa', departments);
 
       await this.prisma.department.createMany({
         data: departments,
@@ -59,18 +61,20 @@ export class DepartmentService {
       const users = await this.prisma.user.findMany();
 
       for (const user of users) {
-        if (!Array.isArray(user.departamentIds)) {
-          continue; // Если нет департаментов, пропускаем
+        if (!Array.isArray(user.departmentIds)) {
+          continue;
         }
 
         const userDepartment = departments.find((dep) =>
-          user.departamentIds.includes(+dep.bitrixId),
+          user.departmentIds.includes(dep.bitrixId),
         );
 
         if (userDepartment) {
           await this.prisma.user.update({
-            where: { id: user.id },
-            data: { departamentIds: { set: [+userDepartment.bitrixId] } },
+            where: { bitrixId: user.bitrixId },
+            data: {
+              Department: { connect: { bitrixId: userDepartment.bitrixId } },
+            }, // Не затираем данные
           });
         }
       }

@@ -5,6 +5,7 @@ import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { ITask } from './type/task.type';
 import { IElapsedItem } from './type/elapsedItem.type';
+import { LAST_YEAR_ISO_DATE } from 'src/constants';
 
 @Injectable()
 export class TaskService {
@@ -17,6 +18,7 @@ export class TaskService {
 
   async getTasks() {
     const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}tasks.task.list`;
+    console.log('getTasks');
 
     try {
       let start = 0;
@@ -25,15 +27,15 @@ export class TaskService {
 
       while (hasMore) {
         const resUrl = `${apiUrl}?start=${start}`;
-
         const response = await lastValueFrom(
           this.httpService.post<{ result: { tasks: ITask[] } }>(resUrl, {
             filter: {
-              '>CREATED_DATE': '2025-01-01T00:00:00Z',
+              '>CREATED_DATE': LAST_YEAR_ISO_DATE(),
             },
             select: ['ID', 'TITLE', 'GROUP_ID', 'GROUP', 'DESCRIPTION'],
           }),
         );
+
         if (!response.data?.result) {
           throw new Error('Bitrix API did not return tasks');
         }
@@ -61,6 +63,10 @@ export class TaskService {
               bitrixId: task.id,
               createdDate: task.createdDate || '',
               description: task.description || '',
+              //FIXME:
+              // Group: {
+              //   connect: { bitrixId: task?.group?.id },
+              // },
             },
           }),
         ),
@@ -74,6 +80,7 @@ export class TaskService {
 
   async getElapsedItem() {
     const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}task.elapseditem.getlist`;
+    console.log('getElapsedItem');
 
     try {
       let start = 1;
@@ -81,11 +88,12 @@ export class TaskService {
       let hasMore = true;
 
       while (hasMore) {
+        console.log(`getElapsedItem: page ${start}`);
         const response = await lastValueFrom(
           this.httpService.post<{ result: IElapsedItem[] }>(apiUrl, {
             ORDER: {},
             FILTER: {
-              '>CREATED_DATE': '2025-01-01T00:00:00Z',
+              CREATED_DATE: LAST_YEAR_ISO_DATE(),
             },
             SELECT: [],
             PARAMS: {
@@ -102,6 +110,7 @@ export class TaskService {
 
         const arr = response.data.result;
         all = [...all, ...arr];
+        console.log(`getElapsedItem: received ${arr.length} items`);
 
         if (arr.length < 50) {
           hasMore = false;
@@ -143,6 +152,7 @@ export class TaskService {
           }),
         ),
       );
+      console.log('getElapsedItem: done');
     } catch (error) {
       throw new Error(`Error fetching tasks: ${error.message}`);
     }

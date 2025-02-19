@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IUser } from './type/user.type';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -14,16 +15,21 @@ export class UserService {
   ) {}
 
   async fetchAndSaveUsers() {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get?ADMIN_MODE=true`;
+    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get`;
+
     try {
       let start = 0;
-      let allUsers: IUser[] = [];
       let hasMore = true;
 
       while (hasMore) {
-        const restUrl = `${apiUrl}&start=${start}`;
+        const restUrl = `${apiUrl}?start=${start}`;
         const response = await lastValueFrom(
-          this.httpService.get<{ result: IUser[] }>(restUrl),
+          this.httpService.post<{ result: IUser[] }>(restUrl, {
+            FILTER: {
+              USER_TYPE: 'employee',
+              ACTIVE: true,
+            },
+          }),
         );
 
         if (!response.data?.result) {
@@ -31,7 +37,13 @@ export class UserService {
         }
 
         const users = response.data.result;
-        allUsers = [...allUsers, ...users];
+
+        if (users.length === 0) {
+          break;
+        }
+
+        const formatUsers = this.extractUserFields(users);
+        await this.saveUsers(formatUsers);
 
         if (users.length < 50) {
           hasMore = false;
@@ -39,40 +51,35 @@ export class UserService {
           start += 50;
         }
       }
-
-      if (allUsers.length === 0) {
-        return [];
-      }
-
-      const formatUsers = this.extractUserFields(allUsers);
-
-      await this.prisma.user.createMany({
-        data: formatUsers,
-        skipDuplicates: true,
-      });
-
-      return formatUsers;
     } catch (error) {
       throw new Error(`Error fetching users: ${error.message}`);
     }
+  }
+
+  async saveUsers(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[]) {
+    await this.prisma.user.createMany({
+      data: data,
+      skipDuplicates: true,
+    });
   }
 
   async findAll() {
     return await this.prisma.user.findMany();
   }
 
-  extractUserFields(userData: IUser[]) {
+  extractUserFields(
+    userData: IUser[],
+  ): Omit<User, 'id' | 'createdAt' | 'updatedAt'>[] {
     return userData.map((user) => ({
       name: user.NAME || '',
       lastName: user.LAST_NAME || '',
       secondName: user.SECOND_NAME || null,
-      birthDate: user.PERSONAL_BIRTHDAY || null,
-      email: user.EMAIL || null,
-      mobile: user.PERSONAL_MOBILE || null,
-      photo: user.PERSONAL_PHOTO || null,
+
       workPosition: user.WORK_POSITION || null,
       bitrixId: user.ID,
-      departamentIds: user.UF_DEPARTMENT || [],
+      departmentIds: Array.isArray(user.UF_DEPARTMENT)
+        ? user.UF_DEPARTMENT.map((item) => item.toString())
+        : null,
     }));
   }
 }

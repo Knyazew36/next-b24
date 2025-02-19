@@ -13,19 +13,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  name       String
-  lastName   String? @map("last_name")
-  secondName String? @map("second_name")
-  birthDate  String? @map("birth_date")
-
-  email        String? @unique
-  photo        String?
-  mobile       String?
+  name         String
+  lastName     String? @map("last_name")
+  secondName   String? @map("second_name")
   workPosition String? @map("work_position")
 
-  departamentIds Int[] @default([])
+  departmentIds String[] @default([])
 
-  Department Department[]
+  Department Department[]  @relation("UserDepartments")
   Tasks      Task[]
   WorkLog    ElapsedItem[]
 }
@@ -34,14 +29,16 @@ model Task {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
 
-  bitrixId String @unique // ID задачи в Bitrix24
-
+  bitrixId    String  @unique
   createdDate String?
   title       String?
   description String?
 
-  User    User?         @relation(fields: [userId], references: [id])
-  userId  Int?
+  groupId String
+
+  Group   SonetGroup?   @relation(fields: [groupId], references: [bitrixId])
+  userId  String?
+  User    User?         @relation(fields: [userId], references: [bitrixId])
   WorkLog ElapsedItem[]
 }
 
@@ -50,16 +47,16 @@ model ElapsedItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  bitrixId    String @unique
-  createdDate String
+  bitrixId    String   @unique
+  createdDate DateTime
 
-  userId String
-  taskId String
+  userId Int
+  taskId Int
 
   minutes String?
 
-  user User @relation(fields: [userId], references: [bitrixId])
-  task Task @relation(fields: [taskId], references: [bitrixId])
+  user User @relation(fields: [userId], references: [id])
+  task Task @relation(fields: [taskId], references: [id])
 }
 
 model Department {
@@ -71,6 +68,15 @@ model Department {
   name     String?
   sort     Int?
   parent   String?
-  User     User?   @relation(fields: [userId], references: [id])
-  userId   Int?
+
+  User User[] @relation("UserDepartments")
+}
+
+model SonetGroup {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bitrixId String @unique
+  Task     Task[]
 }

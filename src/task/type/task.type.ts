@@ -4,4 +4,7 @@ export interface ITask {
   groupId: string;
   description: string;
   createdDate: string;
+  group: {
+    id: string;
+  };
 }
