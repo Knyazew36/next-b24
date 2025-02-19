@@ -19,6 +19,6 @@ export class TaskController {
   }
   @Post('test')
   async post() {
-    return await this.taskService.getTest();
+    return await this.taskService.getElapsedItem();
   }
 }

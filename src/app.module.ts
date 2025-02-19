@@ -11,6 +11,7 @@ import { DepartmentModule } from './department/department.module';
 import { DepartmentService } from './department/department.service';
 import { UserService } from './user/user.service';
 import { TaskService } from './task/task.service';
+import { ReportModule } from './report/report.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { TaskService } from './task/task.service';
     SonetgroupModule,
     TaskModule,
     DepartmentModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [AppService, DepartmentService, UserService, TaskService],

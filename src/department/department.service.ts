@@ -51,8 +51,6 @@ export class DepartmentService {
         parent: item.PARENT ? item.PARENT : null,
       }));
 
-      console.log('depa', departments);
-
       await this.prisma.department.createMany({
         data: departments,
         skipDuplicates: true,

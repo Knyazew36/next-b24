@@ -34,11 +34,11 @@ model Task {
   title       String?
   description String?
 
-  groupId String
+  groupBitrixId String?
+  userBitrixId  String?
 
-  Group   SonetGroup?   @relation(fields: [groupId], references: [bitrixId])
-  userId  String?
-  User    User?         @relation(fields: [userId], references: [bitrixId])
+  Group   SonetGroup?   @relation(fields: [groupBitrixId], references: [bitrixId])
+  User    User?         @relation(fields: [userBitrixId], references: [bitrixId])
   WorkLog ElapsedItem[]
 }
 
@@ -50,13 +50,13 @@ model ElapsedItem {
   bitrixId    String   @unique
   createdDate DateTime
 
-  userId Int
-  taskId Int
+  userBitrixId String
+  taskBitrixId String
 
   minutes String?
 
-  user User @relation(fields: [userId], references: [id])
-  task Task @relation(fields: [taskId], references: [id])
+  user User @relation(fields: [userBitrixId], references: [bitrixId])
+  task Task @relation(fields: [taskBitrixId], references: [bitrixId])
 }
 
 model Department {
