@@ -43,13 +43,34 @@ export class TaskService {
           where: { bitrixId: task.id },
           update: {
             title: task.title || '',
+            bitrixId: task.id,
+            createdDate: task.createdDate || '',
             description: task.description || '',
+            groupBitrixId: task.groupId || '',
+            SonetGroup: {
+              connectOrCreate: {
+                where: { bitrixId: task.groupId || '' },
+                create: {
+                  bitrixId: task.groupId,
+                },
+              },
+            },
           },
+
           create: {
             title: task.title || '',
             bitrixId: task.id,
             createdDate: task.createdDate || '',
             description: task.description || '',
+            groupBitrixId: task.groupId || '',
+            SonetGroup: {
+              connectOrCreate: {
+                where: { bitrixId: task.groupId || '' },
+                create: {
+                  bitrixId: task.groupId,
+                },
+              },
+            },
           },
         });
       }
@@ -74,14 +95,14 @@ export class TaskService {
     let hasMore = true;
 
     while (hasMore) {
-      console.log('start', start);
+      console.log('fetchAndSaveElapsedItems start', start);
       const response = await lastValueFrom(
         this.httpService.post<{ result: IElapsedItem[] }>(apiUrl, {
           ORDER: {
             CREATED_DATE: 'desc',
           },
           FILTER: {
-            '>CREATED_DATE': '2024-07-10T13:51:09+03:00',
+            '>CREATED_DATE': '2024-11-10T13:51:09+03:00',
             // CREATED_DATE: LAST_YEAR_ISO_DATE(),
           },
           SELECT: [],
@@ -101,7 +122,26 @@ export class TaskService {
         await this.prisma.elapsedItem.upsert({
           where: { bitrixId: item.ID },
           update: {
+            bitrixId: item.ID,
             minutes: item.MINUTES || '',
+            createdDate: item.CREATED_DATE,
+            user: {
+              connectOrCreate: {
+                where: { bitrixId: item.USER_ID },
+                create: {
+                  bitrixId: item.USER_ID,
+                  name: '',
+                },
+              },
+            },
+            task: {
+              connectOrCreate: {
+                where: { bitrixId: item.TASK_ID },
+                create: {
+                  bitrixId: item.TASK_ID,
+                },
+              },
+            },
           },
           create: {
             bitrixId: item.ID,
@@ -135,10 +175,9 @@ export class TaskService {
 
   async getElapsedItem() {
     try {
-      const res = await this.fetchAndSaveElapsedItems();
+      await this.fetchAndSaveElapsedItems();
 
-      console.log('res', res);
-      // return 'done';
+      return 'done';
     } catch (error) {
       throw new Error(`Error fetching elapsed items: ${error.message}`);
     }

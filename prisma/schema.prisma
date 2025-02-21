@@ -36,10 +36,11 @@ model Task {
 
   groupBitrixId String?
   userBitrixId  String?
+  sonetGroupId  String?
 
-  Group   SonetGroup?   @relation(fields: [groupBitrixId], references: [bitrixId])
-  User    User?         @relation(fields: [userBitrixId], references: [bitrixId])
-  WorkLog ElapsedItem[]
+  SonetGroup SonetGroup?   @relation(fields: [sonetGroupId], references: [bitrixId])
+  User       User?         @relation(fields: [userBitrixId], references: [bitrixId])
+  WorkLog    ElapsedItem[]
 }
 
 model ElapsedItem {
@@ -78,5 +79,10 @@ model SonetGroup {
   updatedAt DateTime @updatedAt
 
   bitrixId String @unique
-  Task     Task[]
+
+  title       String?
+  createdDate String?
+  isProject   Boolean?
+
+  Task Task[]
 }

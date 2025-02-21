@@ -12,6 +12,7 @@ import { DepartmentService } from './department/department.service';
 import { UserService } from './user/user.service';
 import { TaskService } from './task/task.service';
 import { ReportModule } from './report/report.module';
+import { SonetgroupService } from './sonetgroup/sonetgroup.service';
 
 @Module({
   imports: [
@@ -25,6 +26,12 @@ import { ReportModule } from './report/report.module';
     ReportModule,
   ],
   controllers: [AppController],
-  providers: [AppService, DepartmentService, UserService, TaskService],
+  providers: [
+    AppService,
+    DepartmentService,
+    UserService,
+    TaskService,
+    SonetgroupService,
+  ],
 })
 export class AppModule {}

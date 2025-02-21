@@ -3,6 +3,7 @@ import { UserService } from './user/user.service';
 import { DepartmentService } from './department/department.service';
 import { PrismaService } from './prisma.service';
 import { TaskService } from './task/task.service';
+import { SonetgroupService } from './sonetgroup/sonetgroup.service';
 
 @Injectable()
 export class AppService {
@@ -10,32 +11,28 @@ export class AppService {
     private readonly userService: UserService,
     private readonly departmentService: DepartmentService,
     private readonly taskService: TaskService,
-
+    private readonly sonetGroupServie: SonetgroupService,
     private readonly prisma: PrismaService,
   ) {}
 
   async getHello() {
     await this.userService.fetchAndSaveUsers();
     await this.departmentService.getDepartment();
+    await this.sonetGroupServie.getSonetGroup();
     await this.taskService.getTasks();
     await this.taskService.getElapsedItem();
-    return await this.prisma.user.findMany({
-      take: 20,
-      include: {
-        Department: true,
-        WorkLog: { include: { task: true } },
-        Tasks: true,
-      },
-    });
   }
 
   async test() {
     return await this.prisma.user.findMany({
-      take: 20,
+      take: 10,
       include: {
         Department: true,
-        WorkLog: { include: { task: true } },
-        Tasks: true,
+        WorkLog: {
+          include: {
+            task: { include: { SonetGroup: { select: { title: true } } } },
+          },
+        },
       },
     });
   }

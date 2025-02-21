@@ -1,7 +1,9 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
+import { ISonetGroup } from './type/sonetgroup.type';
 
 @Injectable()
 export class SonetgroupService {
@@ -11,71 +13,56 @@ export class SonetgroupService {
     private readonly prisma: PrismaService,
   ) {}
 
-  // async fetchAndSaveUsers() {
-  //   const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}sonet_group.get`;
+  private async fetchAndSaveSonetGroup(): Promise<void> {
+    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}sonet_group.get`;
+    let start = 0;
+    let hasMore = true;
 
-  //   try {
-  //     let start = 0;
-  //     let all: ISonetGroup[] = [];
-  //     let hasMore = true;
+    while (hasMore) {
+      const response = await lastValueFrom(
+        this.httpService.post<{ result: ISonetGroup[] }>(apiUrl, {
+          ORDER: { DATE_CREATE: 'DESC' },
+          FILTER: { '>DATE_CREATE': '2024-01-06T16:27:51+03:00' },
+          IS_ADMIN: 'Y',
+          start: start,
+          limit: 50,
+        }),
+      );
 
-  //     while (hasMore) {
-  //       const restUrl = `${apiUrl}?start=${start}`;
-  //       const response = await lastValueFrom(
-  //         this.httpService.get<{ result: ISonetGroup[] }>(restUrl),
-  //       );
+      if (!response.data?.result) {
+        throw new Error('Bitrix API did not return fetchAndSaveSonetGroup');
+      }
 
-  //       if (!response.data?.result) {
-  //         throw new Error('Bitrix API did not return sonet_group.get');
-  //       }
+      const data = response.data.result;
+      for (const item of data) {
+        await this.prisma.sonetGroup.upsert({
+          where: { bitrixId: item.ID.toString() },
+          update: {
+            title: item.NAME || '',
+            bitrixId: item.ID.toString(),
+            createdDate: item.DATE_CREATE || '',
+            isProject: item.PROJECT === 'Y',
+          },
+          create: {
+            title: item.NAME || '',
+            bitrixId: item.ID.toString(),
+            createdDate: item.DATE_CREATE || '',
+            isProject: item.PROJECT === 'Y',
+          },
+        });
+      }
+      hasMore = data.length >= 50;
 
-  //       const { result } = response.data;
-  //       all = [...all, ...result];
+      if (hasMore) start += 50;
+    }
+  }
 
-  //       if (result.length < 50) {
-  //         hasMore = false;
-  //       } else {
-  //         start += 50;
-  //       }
-  //     }
-
-  //     if (all.length === 0) {
-  //       return [];
-  //     }
-
-  //     const formatUsers = this.extractUserFields(all);
-  //     await this.saveUsers(formatUsers);
-
-  //     return formatUsers;
-  //   } catch (error) {
-  //     throw new Error(`Error fetching users: ${error.message}`);
-  //   }
-  // }
-
-  // async saveUsers(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[]) {
-  //   await this.prisma.user.createMany({
-  //     data: data,
-  //     skipDuplicates: true,
-  //   });
-  // }
-
-  // async findAll() {
-  //   return await this.prisma.user.findMany();
-  // }
-
-  // extractUserFields(
-  //   userData: IUser[],
-  // ): Omit<User, 'id' | 'createdAt' | 'updatedAt'>[] {
-  //   return userData.map((user) => ({
-  //     name: user.NAME || '',
-  //     lastName: user.LAST_NAME || '',
-  //     secondName: user.SECOND_NAME || null,
-
-  //     workPosition: user.WORK_POSITION || null,
-  //     bitrixId: user.ID,
-  //     departmentIds: Array.isArray(user.UF_DEPARTMENT)
-  //       ? user.UF_DEPARTMENT.map((item) => item.toString())
-  //       : null,
-  //   }));
-  // }
+  async getSonetGroup() {
+    try {
+      await this.fetchAndSaveSonetGroup();
+      return 'done';
+    } catch (error) {
+      throw new Error(`Error fetching sonetGroup: ${error.message}`);
+    }
+  }
 }
