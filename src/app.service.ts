@@ -28,4 +28,15 @@ export class AppService {
       },
     });
   }
+
+  async test() {
+    return await this.prisma.user.findMany({
+      take: 20,
+      include: {
+        Department: true,
+        WorkLog: { include: { task: true } },
+        Tasks: true,
+      },
+    });
+  }
 }

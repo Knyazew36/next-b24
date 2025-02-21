@@ -64,7 +64,11 @@ export class UserService {
   }
 
   async findAll() {
-    return await this.prisma.user.findMany();
+    return await this.prisma.user.findMany({ include: { Tasks: true } });
+  }
+
+  async findOne(id: number) {
+    return await this.prisma.user.findUnique({ where: { id } });
   }
 
   extractUserFields(

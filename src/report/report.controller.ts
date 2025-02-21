@@ -7,7 +7,7 @@ export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
   @Post()
-  async getReport(@Body() body: GetReportDto) {
-    return this.reportService.getReport(body);
+  async getReport() {
+    return this.reportService.getReport();
   }
 }

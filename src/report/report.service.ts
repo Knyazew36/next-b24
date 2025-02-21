@@ -1,84 +1,88 @@
-import { Body, Injectable } from '@nestjs/common';
-import { endOfDay, endOfMonth, startOfDay, subDays, subMonths } from 'date-fns';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { GetReportDto } from './dto/get-report.dto';
 
 @Injectable()
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReport(@Body() body: GetReportDto) {
-    const departmentId = (() => {
-      if (!body?.filter?.departament) return undefined;
-      const departmentMap = {
-        front: '68',
-        back: '70',
-      };
-      return departmentMap[body.filter.departament];
-    })();
-
-    const startDate = new Date('2024-11-01T00:00:00.000Z');
-    const endDate = new Date('2025-01-31T23:59:59.999Z');
-
-    const whereCondition: any = {
-      createdDate: { gte: startDate, lte: endDate },
-    };
-
-    if (departmentId) {
-      whereCondition.AND = {
-        user: { Department: { some: { bitrixId: departmentId } } },
-      };
-    }
-
-    const workLogs = await this.prisma.elapsedItem.findMany({
-      take: 100,
-      where: whereCondition,
+  async getReport() {
+    const users = await this.prisma.user.findMany({
       select: {
-        user: {
+        name: true,
+        secondName: true,
+        lastName: true,
+        WorkLog: {
+          orderBy: { createdDate: 'desc' },
           select: {
             bitrixId: true,
-            name: true,
-            lastName: true,
-            secondName: true,
+            minutes: true,
+            createdDate: true,
+            task: {
+              select: {
+                title: true,
+              },
+            },
+          },
+          where: {
+            createdDate: {
+              gte: '2024-11-01T00:00:00.000Z',
+              lte: '2025-01-31T23:59:59.999Z',
+            },
           },
         },
-
-        task: {
-          select: {
-            title: true,
-            User: { select: { name: true, bitrixId: true } },
-          },
-        },
-
-        createdDate: true,
-        minutes: true,
       },
     });
 
-    const report = {};
+    const reportData = users
+      .map((user) => {
+        if (!user.name) return null;
 
-    workLogs.forEach(({ user, createdDate, minutes, task }) => {
-      if (!user) return;
+        const fullName =
+          `${user.lastName} ${user.name} ${user.secondName ?? ''}`.trim();
 
-      const userName = `${user.lastName || ''} ${user.name}`.trim();
-      const dateKey = createdDate.toISOString().split('T')[0];
+        const report = {};
+        // const report = this.generateDailyReport(user.WorkLog);
 
-      if (!report[userName]) {
-        report[userName] = {
-          times: {},
-          works: {},
-          total: 0,
-        };
-      }
+        return { fullName, report };
+      })
+      .filter(Boolean);
 
-      if (!report[userName].times[dateKey]) {
-        report[userName].times[dateKey] = 0;
-      }
+    return reportData;
+  }
 
-      report[userName].times[dateKey] += parseInt(minutes || '0', 10);
-      report[userName].total += parseInt(minutes || '0', 10);
-    });
+  // private generateDailyReport(data: []) {
+  //   return data.reduce((acc, task) => {
+  //     // Формируем ключ по дате без времени
+  //     const dateKey = new Date(task.createdDate).toISOString().split('T')[0];
 
-    return report;
+  //     // Если уже есть этот день в объекте, добавляем туда
+  //     if (!acc[dateKey]) {
+  //       acc[dateKey] = {
+  //         totalMinutes: 0,
+  //         tasks: [],
+  //       };
+  //     }
+
+  //     // // Увеличиваем общее количество минут
+  //     // acc[dateKey].totalMinutes += Number(task.minutes);
+
+  //     // // Добавляем объект задачи
+  //     // acc[dateKey].tasks.push({
+  //     //   bitrixId: task.bitrixId,
+  //     //   minutes: task.minutes,
+  //     //   createdDate: task.createdDate,
+  //     //   task: task.task,
+  //     // });
+  //     console.log('acc', acc);
+  //     return acc;
+  //   }, {});
+  // }
+
+  private formatMinutes(minutes: number): string {
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return hours > 0
+      ? `${hours}ч ${remainingMinutes}м`
+      : `${remainingMinutes}м`;
   }
 }
