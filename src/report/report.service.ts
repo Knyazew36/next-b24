@@ -1,13 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { IGetReportBody } from './type/getReport.type';
+import * as dayjs from 'dayjs';
+import { eachDayOfInterval, format, isWeekend } from 'date-fns';
 
 @Injectable()
 export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getFromBd() {
+  private generateDateRangeWithDateFns(startDate: string, endDate: string) {
+    return eachDayOfInterval({
+      start: new Date(startDate),
+      end: new Date(endDate),
+    }).map((date) => ({
+      date: format(date, 'yyyy-MM-dd'),
+      month: date.getMonth() + 1,
+      isWeekend: isWeekend(date),
+    }));
+  }
+
+  async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
     const users = await this.prisma.user.findMany({
+      orderBy: { departmentIds: 'asc' },
       select: {
         name: true,
         secondName: true,
@@ -29,8 +43,8 @@ export class ReportService {
           },
           where: {
             createdDate: {
-              gte: '2024-11-01T00:00:00.000Z',
-              lte: '2025-01-31T23:59:59.999Z',
+              gte: dateFrom,
+              lte: dateTo,
             },
           },
         },
@@ -41,9 +55,20 @@ export class ReportService {
   }
 
   async getReport(body: IGetReportBody) {
-    console.log('body', body);
+    const from = body?.dateStart
+      ? dayjs(body.dateStart).startOf('day').toISOString()
+      : dayjs().subtract(1, 'month').startOf('day').toISOString();
 
-    const users = await this.getFromBd();
+    const to = body?.dateEnd
+      ? dayjs(body.dateEnd).endOf('day').toISOString()
+      : dayjs().endOf('day').toISOString();
+
+    const dateRange = this.generateDateRangeWithDateFns(from, to);
+
+    const users = await this.getFromBd({
+      dateFrom: from,
+      dateTo: to,
+    });
     const reportData = users
       .map((user) => {
         if (!user.name) return null;
@@ -53,6 +78,8 @@ export class ReportService {
           `${user.lastName} ${user.name} ${user.secondName ?? ''}`.trim();
 
         const newItem = {};
+
+        const department = user.Department;
 
         user.WorkLog.forEach((item) => {
           const dateKey = new Date(item.createdDate)
@@ -70,7 +97,6 @@ export class ReportService {
           const groupId = item.task.SonetGroup?.bitrixId ?? 'no-group';
           const groupName = item.task.SonetGroup?.title ?? 'Без группы';
 
-          // Проверяем, существует ли уже эта группа в массиве
           let group = newItem[dateKey].groups.find(
             (g) => g.groupId === groupId,
           );
@@ -82,17 +108,29 @@ export class ReportService {
 
           group.tasks.push({
             title: item.task.title,
-            time: item.minutes,
+            time: this.formatMinutes(+item.minutes),
             taskId: item.bitrixId ?? '',
             taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${item.task.groupBitrixId}/tasks/task/view/${item.bitrixId}/`,
           });
         });
 
-        return { fullName, totalTime, workLog: newItem };
+        // Форматируем time после вычисления общего времени за день
+        Object.keys(newItem).forEach((dateKey) => {
+          newItem[dateKey].time = this.formatMinutes(newItem[dateKey].time);
+        });
+
+        const formattedTotalTime = this.formatMinutes(totalTime);
+
+        return {
+          fullName,
+          totalTime: formattedTotalTime,
+          workLog: newItem,
+          department,
+        };
       })
       .filter(Boolean);
 
-    return reportData;
+    return { data: reportData, dateRange };
   }
 
   private formatMinutes(minutes: number): string {

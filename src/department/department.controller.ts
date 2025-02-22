@@ -5,8 +5,8 @@ import { DepartmentService } from './department.service';
 export class DepartmentController {
   constructor(private readonly departmentService: DepartmentService) {}
 
-  @Get('test')
-  async test() {
+  @Get()
+  async getAllDepartment() {
     return await this.departmentService.getDepartment();
   }
 }

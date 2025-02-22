@@ -11,8 +11,8 @@ export class ReportController {
   async getReport(@Body() body: IGetReportBody) {
     return this.reportService.getReport(body);
   }
-  @Get()
-  async getTestBd() {
-    return this.reportService.getFromBd();
-  }
+  // @Get()
+  // async getTestBd() {
+  //   return this.reportService.getFromBd({});
+  // }
 }

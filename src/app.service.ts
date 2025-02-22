@@ -17,7 +17,7 @@ export class AppService {
 
   async getHello() {
     await this.userService.fetchAndSaveUsers();
-    await this.departmentService.getDepartment();
+    await this.departmentService.getDepartmentFromBitrix();
     await this.sonetGroupServie.getSonetGroup();
     await this.taskService.getTasks();
     await this.taskService.getElapsedItem();

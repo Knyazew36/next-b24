@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { IDepartment } from './type/department.type';
+import { SelectOption } from 'src/type/select-option.type';
 
 @Injectable()
 export class DepartmentService {
@@ -13,7 +14,7 @@ export class DepartmentService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getDepartment() {
+  async getDepartmentFromBitrix() {
     const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}department.get`;
 
     try {
@@ -81,5 +82,18 @@ export class DepartmentService {
     } catch (error) {
       throw new Error(`Error fetching departments: ${error.message}`);
     }
+  }
+
+  async getDepartment() {
+    const department = await this.prisma.department.findMany({
+      select: { name: true, bitrixId: true },
+    });
+
+    const formattedDepartment: SelectOption[] = department.map((item) => ({
+      label: item.name,
+      value: item.bitrixId,
+    }));
+
+    return formattedDepartment;
   }
 }
