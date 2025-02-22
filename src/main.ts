@@ -3,7 +3,11 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {});
+  const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: 'http://localhost:3000', // Явно указываем разрешённый origin
+    credentials: true, // Разрешаем отправку cookies, авторизационных заголовков
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Bitrix24')
@@ -12,8 +16,8 @@ async function bootstrap() {
     .addTag('bitrix')
     .build();
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, documentFactory);
 
-  await app.listen(4000);
+  SwaggerModule.setup('api', app, documentFactory);
+  app.listen(4000);
 }
 bootstrap();

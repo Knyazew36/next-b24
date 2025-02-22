@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma.service';
 import { IGetReportBody } from './type/getReport.type';
 import * as dayjs from 'dayjs';
 import { eachDayOfInterval, format, isWeekend } from 'date-fns';
+import { formatMinutesToHours } from 'src/utils';
 
 @Injectable()
 export class ReportService {
@@ -22,10 +23,12 @@ export class ReportService {
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
+
       select: {
         name: true,
         secondName: true,
         lastName: true,
+        Department: true,
         WorkLog: {
           orderBy: { createdDate: 'desc' },
           select: {
@@ -108,7 +111,7 @@ export class ReportService {
 
           group.tasks.push({
             title: item.task.title,
-            time: this.formatMinutes(+item.minutes),
+            time: formatMinutesToHours(+item.minutes),
             taskId: item.bitrixId ?? '',
             taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${item.task.groupBitrixId}/tasks/task/view/${item.bitrixId}/`,
           });
@@ -116,10 +119,10 @@ export class ReportService {
 
         // Форматируем time после вычисления общего времени за день
         Object.keys(newItem).forEach((dateKey) => {
-          newItem[dateKey].time = this.formatMinutes(newItem[dateKey].time);
+          newItem[dateKey].time = formatMinutesToHours(newItem[dateKey].time);
         });
 
-        const formattedTotalTime = this.formatMinutes(totalTime);
+        const formattedTotalTime = formatMinutesToHours(totalTime);
 
         return {
           fullName,
@@ -130,14 +133,15 @@ export class ReportService {
       })
       .filter(Boolean);
 
-    return { data: reportData, dateRange };
-  }
+    let filtered;
+    if (body.department) {
+      filtered = reportData.filter((user) => {
+        return user.department.some((dep) => +dep.id === +body.department);
+      });
+    } else {
+      filtered = reportData;
+    }
 
-  private formatMinutes(minutes: number): string {
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return hours > 0
-      ? `${hours}ч ${remainingMinutes}м`
-      : `${remainingMinutes}м`;
+    return { data: filtered, dateRange };
   }
 }

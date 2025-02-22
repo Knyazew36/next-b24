@@ -20,6 +20,8 @@ model User {
 
   departmentIds String[] @default([])
 
+  avatar String?
+
   Department Department[]  @relation("UserDepartments")
   Tasks      Task[]
   WorkLog    ElapsedItem[]

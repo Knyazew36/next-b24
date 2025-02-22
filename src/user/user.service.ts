@@ -78,7 +78,7 @@ export class UserService {
       name: user.NAME || '',
       lastName: user.LAST_NAME || '',
       secondName: user.SECOND_NAME || null,
-
+      avatar: user.PERSONAL_PHOTO || null,
       workPosition: user.WORK_POSITION || null,
       bitrixId: user.ID,
       departmentIds: Array.isArray(user.UF_DEPARTMENT)
