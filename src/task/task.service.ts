@@ -95,7 +95,6 @@ export class TaskService {
     let hasMore = true;
 
     while (hasMore) {
-      console.log('fetchAndSaveElapsedItems start', start);
       const response = await lastValueFrom(
         this.httpService.post<{ result: IElapsedItem[] }>(apiUrl, {
           ORDER: {

@@ -10,6 +10,8 @@ export class ReportService {
   constructor(private readonly prisma: PrismaService) {}
 
   private generateDateRangeWithDateFns(startDate: string, endDate: string) {
+    console.info('startDate gene', startDate);
+    console.info('endDate gene', endDate);
     return eachDayOfInterval({
       start: new Date(startDate),
       end: new Date(endDate),
@@ -21,6 +23,7 @@ export class ReportService {
   }
 
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+    console.log('datafrom', dateFrom);
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
 
@@ -35,6 +38,7 @@ export class ReportService {
             bitrixId: true,
             minutes: true,
             createdDate: true,
+
             task: {
               select: {
                 title: true,
@@ -58,6 +62,7 @@ export class ReportService {
   }
 
   async getReport(body: IGetReportBody) {
+    console.log('body', body);
     const from = body?.dateStart
       ? dayjs(body.dateStart).startOf('day').toISOString()
       : dayjs().subtract(1, 'month').startOf('day').toISOString();
@@ -133,15 +138,16 @@ export class ReportService {
       })
       .filter(Boolean);
 
-    let filtered;
+    let filtered = reportData;
+
     if (body.department) {
       filtered = reportData.filter((user) => {
-        return user.department.some((dep) => +dep.id === +body.department);
+        return user.department.some(
+          (dep) => +dep.bitrixId === +body.department,
+        );
       });
-    } else {
-      filtered = reportData;
     }
 
-    return { data: filtered, dateRange };
+    return { data: filtered, dateRange, from, to };
   }
 }
