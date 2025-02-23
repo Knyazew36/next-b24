@@ -22,8 +22,45 @@ export class ReportService {
     }));
   }
 
+  private generateDateFilters = () => {
+    const today = new Date();
+    const formatDate = (date) => date.toISOString().split('T')[0];
+
+    const dateRanges = [
+      {
+        label: 'Текущий месяц',
+        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth(), 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0))}`,
+      },
+      {
+        label: 'Прошлый месяц',
+        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth(), 0))}`,
+      },
+      {
+        label: 'Текущая неделя',
+        value: (() => {
+          const start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() + 1);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
+        })(),
+      },
+      {
+        label: 'Прошлая неделя',
+        value: (() => {
+          const start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 6);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
+        })(),
+      },
+    ];
+
+    return dateRanges;
+  };
+
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
-    console.log('datafrom', dateFrom);
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
 
@@ -32,6 +69,7 @@ export class ReportService {
         secondName: true,
         lastName: true,
         Department: true,
+        avatar: true,
         WorkLog: {
           orderBy: { createdDate: 'desc' },
           select: {
@@ -62,7 +100,6 @@ export class ReportService {
   }
 
   async getReport(body: IGetReportBody) {
-    console.log('body', body);
     const from = body?.dateStart
       ? dayjs(body.dateStart).startOf('day').toISOString()
       : dayjs().subtract(1, 'month').startOf('day').toISOString();
@@ -70,8 +107,6 @@ export class ReportService {
     const to = body?.dateEnd
       ? dayjs(body.dateEnd).endOf('day').toISOString()
       : dayjs().endOf('day').toISOString();
-
-    const dateRange = this.generateDateRangeWithDateFns(from, to);
 
     const users = await this.getFromBd({
       dateFrom: from,
@@ -110,7 +145,7 @@ export class ReportService {
           );
 
           if (!group) {
-            group = { groupId, groupName, tasks: [] };
+            group = { groupId, groupName, totalTime, tasks: [] };
             newItem[dateKey].groups.push(group);
           }
 
@@ -127,13 +162,14 @@ export class ReportService {
           newItem[dateKey].time = formatMinutesToHours(newItem[dateKey].time);
         });
 
-        const formattedTotalTime = formatMinutesToHours(totalTime);
+        const formattedTotalTime = formatMinutesToHours(+totalTime);
 
         return {
           fullName,
           totalTime: formattedTotalTime,
           workLog: newItem,
           department,
+          avatar: user.avatar || '',
         };
       })
       .filter(Boolean);
@@ -148,6 +184,9 @@ export class ReportService {
       });
     }
 
-    return { data: filtered, dateRange, from, to };
+    const dateFilters = this.generateDateFilters();
+    const dateRange = this.generateDateRangeWithDateFns(from, to);
+
+    return { data: filtered, dateRange, dateFilters, from, to };
   }
 }
