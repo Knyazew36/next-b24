@@ -4,7 +4,11 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { ITask } from './type/task.type';
-import { IElapsedItem } from './type/elapsedItem.type';
+
+interface TaskWithParentTask {
+  parentId: string;
+  taskId: string;
+}
 
 @Injectable()
 export class TaskService {
@@ -14,6 +18,8 @@ export class TaskService {
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
   ) {}
+
+  private taskWithParentTask: TaskWithParentTask[] = [];
 
   private async fetchAndSaveTasks(): Promise<void> {
     const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}tasks.task.list`;
@@ -26,9 +32,8 @@ export class TaskService {
       const response = await lastValueFrom(
         this.httpService.post<{ result: { tasks: ITask[] } }>(resUrl, {
           filter: {
-            '>CREATED_DATE': '2024-07-10T13:51:09+03:00',
+            '>CREATED_DATE': '2024-02-10T13:51:09+03:00',
           },
-          select: ['ID', 'TITLE', 'GROUP_ID', 'GROUP', 'DESCRIPTION'],
         }),
       );
 
@@ -37,39 +42,33 @@ export class TaskService {
       }
 
       const tasks = response.data.result.tasks;
+
       await this.saveTasksBd(tasks);
 
       hasMore = tasks.length >= 50;
       if (hasMore) start += 50;
     }
+    console.log('taskWithParentTask', this.taskWithParentTask);
+    await this.linkTaskToTask(this.taskWithParentTask);
   }
 
   private async saveTasksBd(data: ITask[]): Promise<void> {
     for (const task of data) {
-      await this.prisma.task.upsert({
-        where: { bitrixId: task.id },
-        update: {
-          title: task.title || '',
-          bitrixId: task.id,
-          createdDate: task.createdDate || '',
-          description: task.description || '',
-          groupBitrixId: task.groupId || '',
-          SonetGroup: {
-            connectOrCreate: {
-              where: { bitrixId: task.groupId || '' },
-              create: {
-                bitrixId: task.groupId,
-              },
-            },
-          },
-        },
+      if (task.parentId && +task.parentId !== 0) {
+        this.taskWithParentTask.push({
+          parentId: task.parentId.toString(),
+          taskId: task.id.toString(),
+        });
+      }
 
-        create: {
+      await this.prisma.task.create({
+        data: {
           title: task.title || '',
           bitrixId: task.id,
           createdDate: task.createdDate || '',
           description: task.description || '',
           groupBitrixId: task.groupId || '',
+          bitrixParentTaskId: task.parentId || null,
           SonetGroup: {
             connectOrCreate: {
               where: { bitrixId: task.groupId || '' },
@@ -82,107 +81,59 @@ export class TaskService {
       });
     }
   }
+
+  private async linkTaskToTask(data: TaskWithParentTask[]): Promise<void> {
+    console.info('linkTaskToTask start');
+
+    const updatePromises = data.map(async (item) => {
+      // Проверяем существование основной задачи
+      const existingTask = await this.prisma.task.findUnique({
+        where: { bitrixId: item.taskId },
+        select: { id: true }, // Достаточно ID
+      });
+
+      if (!existingTask) {
+        console.warn(
+          `Task with bitrixId ${item.taskId} not found, skipping update.`,
+        );
+        return;
+      }
+
+      // Проверяем существование родительской задачи
+      const parentTask = await this.prisma.task.findUnique({
+        where: { bitrixId: item.parentId },
+        select: { id: true },
+      });
+
+      if (!parentTask) {
+        console.warn(
+          `Parent Task with bitrixId ${item.parentId} not found, skipping.`,
+        );
+        return;
+      }
+
+      // Обновляем задачу, если обе существуют
+      return this.prisma.task.update({
+        where: { bitrixId: item.taskId },
+        data: {
+          ParentTask: {
+            connect: { bitrixId: item.parentId },
+          },
+        },
+      });
+    });
+
+    await Promise.all(updatePromises); // Выполняем все обновления параллельно
+
+    console.info('linkTaskToTask end');
+  }
+
   async getTasks() {
     try {
       await this.fetchAndSaveTasks();
       return 'done';
     } catch (error) {
       throw new Error(`Error fetching tasks: ${error.message}`);
-    }
-  }
-
-  private async fetchAndSaveElapsedItems(): Promise<void> {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}task.elapseditem.getlist`;
-    let start = 1;
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await lastValueFrom(
-        this.httpService.post<{ result: IElapsedItem[] }>(apiUrl, {
-          ORDER: {
-            CREATED_DATE: 'desc',
-          },
-          FILTER: {
-            '>CREATED_DATE': '2024-11-10T13:51:09+03:00',
-          },
-          SELECT: [],
-          PARAMS: {
-            NAV_PARAMS: {
-              iNumPage: start,
-            },
-          },
-        }),
-      );
-      if (!response.data?.result) {
-        throw new Error(`Bitrix API did not return elapsed items`);
-      }
-
-      const elapsedItems = response.data.result;
-      await this.saveElapsedItemsBd(elapsedItems);
-
-      hasMore = elapsedItems.length >= 50;
-      if (hasMore) start += 1;
-    }
-  }
-
-  private async saveElapsedItemsBd(data: IElapsedItem[]): Promise<void> {
-    for (const item of data) {
-      await this.prisma.elapsedItem.upsert({
-        where: { bitrixId: item.ID },
-        update: {
-          bitrixId: item.ID,
-          minutes: item.MINUTES || '',
-          createdDate: item.CREATED_DATE,
-          user: {
-            connectOrCreate: {
-              where: { bitrixId: item.USER_ID },
-              create: {
-                bitrixId: item.USER_ID,
-                name: '',
-              },
-            },
-          },
-          task: {
-            connectOrCreate: {
-              where: { bitrixId: item.TASK_ID },
-              create: {
-                bitrixId: item.TASK_ID,
-              },
-            },
-          },
-        },
-        create: {
-          bitrixId: item.ID,
-          minutes: item.MINUTES || '',
-          createdDate: item.CREATED_DATE,
-          user: {
-            connectOrCreate: {
-              where: { bitrixId: item.USER_ID },
-              create: {
-                bitrixId: item.USER_ID,
-                name: '',
-              },
-            },
-          },
-          task: {
-            connectOrCreate: {
-              where: { bitrixId: item.TASK_ID },
-              create: {
-                bitrixId: item.TASK_ID,
-              },
-            },
-          },
-        },
-      });
-    }
-  }
-
-  async getElapsedItem() {
-    try {
-      await this.fetchAndSaveElapsedItems();
-      return 'done';
-    } catch (error) {
-      throw new Error(`Error fetching elapsed items: ${error.message}`);
     }
   }
 }

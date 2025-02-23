@@ -14,6 +14,7 @@ import { TaskService } from './task/task.service';
 import { ReportModule } from './report/report.module';
 import { SonetgroupService } from './sonetgroup/sonetgroup.service';
 import { AppCron } from './app.cron';
+import { WorkLogModule } from './work-log/work-log.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AppCron } from './app.cron';
     TaskModule,
     DepartmentModule,
     ReportModule,
+    WorkLogModule,
   ],
   controllers: [AppController],
   providers: [

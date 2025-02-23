@@ -1,6 +1,5 @@
 import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
 import { ReportService } from './report.service';
-import { GetReportDto } from './dto/get-report.dto';
 import { IGetReportBody } from './type/getReport.type';
 
 @Controller('report')

@@ -36,13 +36,18 @@ model Task {
   title       String?
   description String?
 
-  groupBitrixId String?
-  userBitrixId  String?
-  sonetGroupId  String?
+  groupBitrixId      String?
+  userBitrixId       String?
+  sonetGroupId       String?
+  bitrixParentTaskId String?
+  parentTaskId       String?
 
   SonetGroup SonetGroup?   @relation(fields: [sonetGroupId], references: [bitrixId])
   User       User?         @relation(fields: [userBitrixId], references: [bitrixId])
   WorkLog    ElapsedItem[]
+
+  ParentTask Task?  @relation("TaskToTask", fields: [parentTaskId], references: [bitrixId])
+  SubTasks   Task[] @relation("TaskToTask")
 }
 
 model ElapsedItem {

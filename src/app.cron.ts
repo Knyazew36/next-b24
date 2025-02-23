@@ -6,7 +6,7 @@ import { AppService } from './app.service';
 export class AppCron {
   constructor(private readonly appService: AppService) {}
 
-  @Cron('45 * * * * *')
+  // @Cron('* * * * * *')
   async getDataFromBD() {
     console.log('getDataFromBD Cron');
     await this.appService.getDataFromBD();

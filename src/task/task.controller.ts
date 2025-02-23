@@ -13,12 +13,11 @@ export class TaskController {
   async test() {
     await this.userService.fetchAndSaveUsers();
     await this.taskService.getTasks();
-    await this.taskService.getElapsedItem();
 
     return;
   }
   @Post('test')
   async post() {
-    return await this.taskService.getElapsedItem();
+    return await this.taskService.getTasks();
   }
 }

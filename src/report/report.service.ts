@@ -83,6 +83,7 @@ export class ReportService {
                 bitrixId: true,
                 SonetGroup: { select: { bitrixId: true, title: true } },
                 groupBitrixId: true,
+                ParentTask: true,
               },
             },
           },
@@ -137,6 +138,7 @@ export class ReportService {
           newItem[dateKey].time += minutes;
           totalTime += minutes;
 
+          //TODO:
           const groupId = item.task.SonetGroup?.bitrixId ?? 'no-group';
           const groupName = item.task.SonetGroup?.title ?? 'Без группы';
 
@@ -189,4 +191,6 @@ export class ReportService {
 
     return { data: filtered, dateRange, dateFilters, from, to };
   }
+
+  private generateGroups() {}
 }
