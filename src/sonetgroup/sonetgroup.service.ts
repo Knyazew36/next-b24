@@ -32,28 +32,31 @@ export class SonetgroupService {
       if (!response.data?.result) {
         throw new Error('Bitrix API did not return fetchAndSaveSonetGroup');
       }
-
       const data = response.data.result;
-      for (const item of data) {
-        await this.prisma.sonetGroup.upsert({
-          where: { bitrixId: item.ID.toString() },
-          update: {
-            title: item.NAME || '',
-            bitrixId: item.ID.toString(),
-            createdDate: item.DATE_CREATE || '',
-            isProject: item.PROJECT === 'Y',
-          },
-          create: {
-            title: item.NAME || '',
-            bitrixId: item.ID.toString(),
-            createdDate: item.DATE_CREATE || '',
-            isProject: item.PROJECT === 'Y',
-          },
-        });
-      }
+      await this.saveSonetGroupBd(data);
       hasMore = data.length >= 50;
 
       if (hasMore) start += 50;
+    }
+  }
+
+  private async saveSonetGroupBd(data: ISonetGroup[]): Promise<void> {
+    for (const item of data) {
+      await this.prisma.sonetGroup.upsert({
+        where: { bitrixId: item.ID.toString() },
+        update: {
+          title: item.NAME || '',
+          bitrixId: item.ID.toString(),
+          createdDate: item.DATE_CREATE || '',
+          isProject: item.PROJECT === 'Y',
+        },
+        create: {
+          title: item.NAME || '',
+          bitrixId: item.ID.toString(),
+          createdDate: item.DATE_CREATE || '',
+          isProject: item.PROJECT === 'Y',
+        },
+      });
     }
   }
 

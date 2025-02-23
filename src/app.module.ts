@@ -13,6 +13,7 @@ import { UserService } from './user/user.service';
 import { TaskService } from './task/task.service';
 import { ReportModule } from './report/report.module';
 import { SonetgroupService } from './sonetgroup/sonetgroup.service';
+import { AppCron } from './app.cron';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { SonetgroupService } from './sonetgroup/sonetgroup.service';
     UserService,
     TaskService,
     SonetgroupService,
+    AppCron,
   ],
 })
 export class AppModule {}

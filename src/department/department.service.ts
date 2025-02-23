@@ -52,36 +52,57 @@ export class DepartmentService {
         parent: item.PARENT ? item.PARENT : null,
       }));
 
-      await this.prisma.department.createMany({
-        data: departments,
-        skipDuplicates: true,
-      });
-
-      const users = await this.prisma.user.findMany();
-
-      for (const user of users) {
-        if (!Array.isArray(user.departmentIds)) {
-          continue;
-        }
-
-        const userDepartment = departments.find((dep) =>
-          user.departmentIds.includes(dep.bitrixId),
-        );
-
-        if (userDepartment) {
-          await this.prisma.user.update({
-            where: { bitrixId: user.bitrixId },
-            data: {
-              Department: { connect: { bitrixId: userDepartment.bitrixId } },
-            }, // Не затираем данные
-          });
-        }
-      }
+      await this.saveDepartmentsBd(departments);
+      await this.linkDepartmentToUser(departments);
 
       return departments;
     } catch (error) {
       throw new Error(`Error fetching departments: ${error.message}`);
     }
+  }
+
+  private async linkDepartmentToUser(
+    departments:
+      | {
+          bitrixId: string;
+          name: string;
+          sort: number;
+          parent: string;
+        }[]
+      | [],
+  ): Promise<void> {
+    const users = await this.prisma.user.findMany();
+    for (const user of users) {
+      if (!Array.isArray(user.departmentIds)) {
+        continue;
+      }
+
+      const userDepartment = departments.find((dep) =>
+        user.departmentIds.includes(dep.bitrixId),
+      );
+
+      if (userDepartment) {
+        await this.prisma.user.update({
+          where: { bitrixId: user.bitrixId },
+          data: {
+            Department: { connect: { bitrixId: userDepartment.bitrixId } },
+          },
+        });
+      }
+    }
+  }
+  private async saveDepartmentsBd(
+    data: {
+      bitrixId: string;
+      name: string;
+      sort: number;
+      parent: string;
+    }[],
+  ): Promise<void> {
+    await this.prisma.department.createMany({
+      data: data,
+      skipDuplicates: true,
+    });
   }
 
   async getDepartment() {

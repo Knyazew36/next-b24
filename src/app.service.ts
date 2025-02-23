@@ -15,12 +15,13 @@ export class AppService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async getHello() {
+  async getDataFromBD() {
     await this.userService.fetchAndSaveUsers();
     await this.departmentService.getDepartmentFromBitrix();
     await this.sonetGroupServie.getSonetGroup();
     await this.taskService.getTasks();
     await this.taskService.getElapsedItem();
+    return 'getDataFromBD Done';
   }
 
   async test() {

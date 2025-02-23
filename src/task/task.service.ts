@@ -5,7 +5,6 @@ import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { ITask } from './type/task.type';
 import { IElapsedItem } from './type/elapsedItem.type';
-import { LAST_YEAR_ISO_DATE } from 'src/constants';
 
 @Injectable()
 export class TaskService {
@@ -38,48 +37,51 @@ export class TaskService {
       }
 
       const tasks = response.data.result.tasks;
-      for (const task of tasks) {
-        await this.prisma.task.upsert({
-          where: { bitrixId: task.id },
-          update: {
-            title: task.title || '',
-            bitrixId: task.id,
-            createdDate: task.createdDate || '',
-            description: task.description || '',
-            groupBitrixId: task.groupId || '',
-            SonetGroup: {
-              connectOrCreate: {
-                where: { bitrixId: task.groupId || '' },
-                create: {
-                  bitrixId: task.groupId,
-                },
-              },
-            },
-          },
-
-          create: {
-            title: task.title || '',
-            bitrixId: task.id,
-            createdDate: task.createdDate || '',
-            description: task.description || '',
-            groupBitrixId: task.groupId || '',
-            SonetGroup: {
-              connectOrCreate: {
-                where: { bitrixId: task.groupId || '' },
-                create: {
-                  bitrixId: task.groupId,
-                },
-              },
-            },
-          },
-        });
-      }
+      await this.saveTasksBd(tasks);
 
       hasMore = tasks.length >= 50;
       if (hasMore) start += 50;
     }
   }
 
+  private async saveTasksBd(data: ITask[]): Promise<void> {
+    for (const task of data) {
+      await this.prisma.task.upsert({
+        where: { bitrixId: task.id },
+        update: {
+          title: task.title || '',
+          bitrixId: task.id,
+          createdDate: task.createdDate || '',
+          description: task.description || '',
+          groupBitrixId: task.groupId || '',
+          SonetGroup: {
+            connectOrCreate: {
+              where: { bitrixId: task.groupId || '' },
+              create: {
+                bitrixId: task.groupId,
+              },
+            },
+          },
+        },
+
+        create: {
+          title: task.title || '',
+          bitrixId: task.id,
+          createdDate: task.createdDate || '',
+          description: task.description || '',
+          groupBitrixId: task.groupId || '',
+          SonetGroup: {
+            connectOrCreate: {
+              where: { bitrixId: task.groupId || '' },
+              create: {
+                bitrixId: task.groupId,
+              },
+            },
+          },
+        },
+      });
+    }
+  }
   async getTasks() {
     try {
       await this.fetchAndSaveTasks();
@@ -102,7 +104,6 @@ export class TaskService {
           },
           FILTER: {
             '>CREATED_DATE': '2024-11-10T13:51:09+03:00',
-            // CREATED_DATE: LAST_YEAR_ISO_DATE(),
           },
           SELECT: [],
           PARAMS: {
@@ -117,65 +118,68 @@ export class TaskService {
       }
 
       const elapsedItems = response.data.result;
-      for (const item of elapsedItems) {
-        await this.prisma.elapsedItem.upsert({
-          where: { bitrixId: item.ID },
-          update: {
-            bitrixId: item.ID,
-            minutes: item.MINUTES || '',
-            createdDate: item.CREATED_DATE,
-            user: {
-              connectOrCreate: {
-                where: { bitrixId: item.USER_ID },
-                create: {
-                  bitrixId: item.USER_ID,
-                  name: '',
-                },
-              },
-            },
-            task: {
-              connectOrCreate: {
-                where: { bitrixId: item.TASK_ID },
-                create: {
-                  bitrixId: item.TASK_ID,
-                },
-              },
-            },
-          },
-          create: {
-            bitrixId: item.ID,
-            minutes: item.MINUTES || '',
-            createdDate: item.CREATED_DATE,
-            user: {
-              connectOrCreate: {
-                where: { bitrixId: item.USER_ID },
-                create: {
-                  bitrixId: item.USER_ID,
-                  name: '',
-                },
-              },
-            },
-            task: {
-              connectOrCreate: {
-                where: { bitrixId: item.TASK_ID },
-                create: {
-                  bitrixId: item.TASK_ID,
-                },
-              },
-            },
-          },
-        });
-      }
+      await this.saveElapsedItemsBd(elapsedItems);
 
       hasMore = elapsedItems.length >= 50;
       if (hasMore) start += 1;
     }
   }
 
+  private async saveElapsedItemsBd(data: IElapsedItem[]): Promise<void> {
+    for (const item of data) {
+      await this.prisma.elapsedItem.upsert({
+        where: { bitrixId: item.ID },
+        update: {
+          bitrixId: item.ID,
+          minutes: item.MINUTES || '',
+          createdDate: item.CREATED_DATE,
+          user: {
+            connectOrCreate: {
+              where: { bitrixId: item.USER_ID },
+              create: {
+                bitrixId: item.USER_ID,
+                name: '',
+              },
+            },
+          },
+          task: {
+            connectOrCreate: {
+              where: { bitrixId: item.TASK_ID },
+              create: {
+                bitrixId: item.TASK_ID,
+              },
+            },
+          },
+        },
+        create: {
+          bitrixId: item.ID,
+          minutes: item.MINUTES || '',
+          createdDate: item.CREATED_DATE,
+          user: {
+            connectOrCreate: {
+              where: { bitrixId: item.USER_ID },
+              create: {
+                bitrixId: item.USER_ID,
+                name: '',
+              },
+            },
+          },
+          task: {
+            connectOrCreate: {
+              where: { bitrixId: item.TASK_ID },
+              create: {
+                bitrixId: item.TASK_ID,
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+
   async getElapsedItem() {
     try {
       await this.fetchAndSaveElapsedItems();
-
       return 'done';
     } catch (error) {
       throw new Error(`Error fetching elapsed items: ${error.message}`);
