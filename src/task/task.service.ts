@@ -71,7 +71,7 @@ export class TaskService {
           bitrixParentTaskId: task.parentId || null,
           SonetGroup: {
             connectOrCreate: {
-              where: { bitrixId: task.groupId || '' },
+              where: { bitrixId: task.groupId },
               create: {
                 bitrixId: task.groupId,
               },

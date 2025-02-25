@@ -33,13 +33,18 @@ export class AppService {
   }
 
   async test() {
-    return await this.prisma.user.findMany({
-      take: 10,
+    return await this.prisma.user.findFirst({
+      where: { lastName: 'Князев' },
       include: {
         Department: true,
         WorkLog: {
           include: {
-            task: { include: { SonetGroup: { select: { title: true } } } },
+            task: {
+              include: {
+                SonetGroup: { select: { title: true } },
+                ParentTask: true,
+              },
+            },
           },
         },
       },

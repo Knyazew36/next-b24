@@ -93,3 +93,10 @@ model SonetGroup {
 
   Task Task[]
 }
+
+model Service {
+  id             Int      @id @default(autoincrement())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  updateBitrixBD DateTime
+}

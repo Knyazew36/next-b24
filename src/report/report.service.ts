@@ -4,6 +4,7 @@ import { IGetReportBody } from './type/getReport.type';
 import * as dayjs from 'dayjs';
 import { eachDayOfInterval, format, isWeekend } from 'date-fns';
 import { formatMinutesToHours } from 'src/utils';
+import { formatDate } from 'src/utils/formatDate';
 
 @Injectable()
 export class ReportService {
@@ -60,6 +61,11 @@ export class ReportService {
     return dateRanges;
   };
 
+  private getDateUpdateBD = async (): Promise<string> => {
+    const record = await this.prisma.service.findUnique({ where: { id: 1 } });
+    return `Последнее обновление: ${formatDate(record.updateBitrixBD)}`;
+  };
+
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
@@ -112,6 +118,9 @@ export class ReportService {
       dateFrom: from,
       dateTo: to,
     });
+
+    const groups = await this.prisma.sonetGroup.findMany();
+
     const reportData = users
       .map((user) => {
         if (!user.name) return null;
@@ -119,9 +128,7 @@ export class ReportService {
 
         const fullName =
           `${user.lastName} ${user.name} ${user.secondName ?? ''}`.trim();
-
         const newItem = {};
-
         const department = user.Department;
 
         user.WorkLog.forEach((item) => {
@@ -137,35 +144,42 @@ export class ReportService {
           newItem[dateKey].time += minutes;
           totalTime += minutes;
 
-          //GROUPS
           const targetTask = item.task.ParentTask ?? item.task;
-
-          //TODO:
+          const taskTitle = targetTask?.title ?? 'Без названия';
           const groupId = targetTask?.bitrixId ?? 'no-group';
-          const groupName = targetTask?.title ?? 'Без группы';
+
           let group = newItem[dateKey].groups.find(
             (g) => g.groupId === groupId,
           );
 
           if (!group) {
-            group = { groupId, groupName, totalTime, tasks: [] };
+            group = {
+              groupId,
+              groupName: groups.find(
+                (item) => item.bitrixId === targetTask.groupBitrixId,
+              )?.title,
+              totalTime: 0,
+              tasks: [],
+            };
             newItem[dateKey].groups.push(group);
           }
 
           const task = {
-            title: targetTask.title,
+            title: taskTitle,
             time: formatMinutesToHours(+item.minutes),
-            // groupName: targetTask.title || '',
             taskId: targetTask?.bitrixId ?? '',
             taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${targetTask.groupBitrixId}/tasks/task/view/${item.task.bitrixId}/`,
-            data: item,
           };
+
           group.tasks.push(task);
+          group.totalTime += minutes;
         });
 
-        // Форматируем time после вычисления общего времени за день
         Object.keys(newItem).forEach((dateKey) => {
           newItem[dateKey].time = formatMinutesToHours(newItem[dateKey].time);
+          newItem[dateKey].groups.forEach((group) => {
+            group.totalTime = formatMinutesToHours(group.totalTime);
+          });
         });
 
         const formattedTotalTime = formatMinutesToHours(+totalTime);
@@ -176,7 +190,6 @@ export class ReportService {
           workLog: newItem,
           department,
           avatar: user.avatar || '',
-          users,
         };
       })
       .filter(Boolean);
@@ -193,9 +206,8 @@ export class ReportService {
 
     const dateFilters = this.generateDateFilters();
     const dateRange = this.generateDateRangeWithDateFns(from, to);
+    const updateDate = await this.getDateUpdateBD();
 
-    return { data: filtered, dateRange, dateFilters, from, to };
+    return { data: filtered, dateRange, dateFilters, from, to, updateDate };
   }
-
-  private generateGroups() {}
 }
