@@ -18,12 +18,12 @@ export class AppService {
   ) {}
 
   async getDataFromBD() {
-    await this.prisma.elapsedItem.deleteMany({});
-    await this.prisma.task.deleteMany({});
-    await this.prisma.user.deleteMany({});
-    await this.prisma.department.deleteMany({});
-    await this.prisma.sonetGroup.deleteMany({});
-    console.log('reset done');
+    // await this.prisma.elapsedItem.deleteMany({});
+    // await this.prisma.task.deleteMany({});
+    // await this.prisma.user.deleteMany({});
+    // await this.prisma.department.deleteMany({});
+    // await this.prisma.sonetGroup.deleteMany({});
+    // console.log('reset done');
     await this.userService.fetchAndSaveUsers();
     await this.departmentService.getDepartmentFromBitrix();
     await this.sonetGroupServie.getSonetGroup();

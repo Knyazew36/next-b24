@@ -57,9 +57,11 @@ export class UserService {
   }
 
   async saveUsers(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>[]) {
-    await this.prisma.user.createMany({
-      data: data,
-      skipDuplicates: true,
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.createMany({
+        data: data,
+        skipDuplicates: true,
+      });
     });
   }
 

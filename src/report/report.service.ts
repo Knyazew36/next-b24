@@ -146,7 +146,8 @@ export class ReportService {
 
           const targetTask = item.task.ParentTask ?? item.task;
           const taskTitle = targetTask?.title ?? 'Без названия';
-          const groupId = targetTask?.bitrixId ?? 'no-group';
+          const groupId = targetTask.groupBitrixId;
+          // (targetTask?.bitrixId || targetTask?.parentTaskId) ?? 'no-group';
 
           let group = newItem[dateKey].groups.find(
             (g) => g.groupId === groupId,
@@ -172,7 +173,7 @@ export class ReportService {
           };
 
           group.tasks.push(task);
-          group.totalTime += minutes;
+          group.totalTime += +item.minutes;
         });
 
         Object.keys(newItem).forEach((dateKey) => {

@@ -10,7 +10,7 @@ export class AppCron {
     private readonly sharedService: SharedService,
   ) {}
 
-  @Cron('*/2 * * * *')
+  // @Cron('*/2 * * * *')
   async getDataFromBD() {
     this.sharedService.createUpdateBitrixBD(new Date());
     await this.appService.getDataFromBD();
