@@ -63,7 +63,6 @@ export class ReportService {
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
-
       select: {
         name: true,
         secondName: true,
@@ -76,13 +75,13 @@ export class ReportService {
             bitrixId: true,
             minutes: true,
             createdDate: true,
-
             task: {
               select: {
                 title: true,
                 bitrixId: true,
-                SonetGroup: { select: { bitrixId: true, title: true } },
                 groupBitrixId: true,
+                parentTaskId: true,
+                SonetGroup: { select: { bitrixId: true, title: true } },
                 ParentTask: true,
               },
             },
@@ -138,10 +137,12 @@ export class ReportService {
           newItem[dateKey].time += minutes;
           totalTime += minutes;
 
-          //TODO:
-          const groupId = item.task.SonetGroup?.bitrixId ?? 'no-group';
-          const groupName = item.task.SonetGroup?.title ?? 'Без группы';
+          //GROUPS
+          const targetTask = item.task.ParentTask ?? item.task;
 
+          //TODO:
+          const groupId = targetTask?.bitrixId ?? 'no-group';
+          const groupName = targetTask?.title ?? 'Без группы';
           let group = newItem[dateKey].groups.find(
             (g) => g.groupId === groupId,
           );
@@ -151,12 +152,15 @@ export class ReportService {
             newItem[dateKey].groups.push(group);
           }
 
-          group.tasks.push({
-            title: item.task.title,
+          const task = {
+            title: targetTask.title,
             time: formatMinutesToHours(+item.minutes),
-            taskId: item.bitrixId ?? '',
-            taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${item.task.groupBitrixId}/tasks/task/view/${item.bitrixId}/`,
-          });
+            // groupName: targetTask.title || '',
+            taskId: targetTask?.bitrixId ?? '',
+            taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${targetTask.groupBitrixId}/tasks/task/view/${item.task.bitrixId}/`,
+            data: item,
+          };
+          group.tasks.push(task);
         });
 
         // Форматируем time после вычисления общего времени за день
@@ -172,6 +176,7 @@ export class ReportService {
           workLog: newItem,
           department,
           avatar: user.avatar || '',
+          users,
         };
       })
       .filter(Boolean);
