@@ -192,7 +192,14 @@ export class ReportService {
       },
       {
         label: 'Прошлый месяц',
-        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth(), 0))}`,
+        value: (() => {
+          const prevMonth = today.getMonth() - 1;
+          const prevYear = today.getFullYear();
+          const firstDayPrevMonth = new Date(prevYear, prevMonth, 1); // 1-е число прошлого месяца
+          const lastDayPrevMonth = new Date(prevYear, prevMonth + 1, 0); // Последний день прошлого месяца
+
+          return `dateStart=${formatDate(firstDayPrevMonth)}&dateEnd=${formatDate(lastDayPrevMonth)}`;
+        })(),
       },
       {
         label: 'Текущая неделя',
