@@ -62,6 +62,7 @@ model ElapsedItem {
   taskBitrixId String
 
   minutes String?
+  comment String?
 
   user User @relation(fields: [userBitrixId], references: [bitrixId])
   task Task @relation(fields: [taskBitrixId], references: [bitrixId])

@@ -56,6 +56,7 @@ export class WorkLogService {
         where: { bitrixId: item.ID },
         update: {
           minutes: item.MINUTES || '',
+          comment: item.COMMENT_TEXT || '',
           user: {
             connectOrCreate: {
               where: { bitrixId: item.USER_ID },
@@ -78,6 +79,7 @@ export class WorkLogService {
           bitrixId: item.ID,
           minutes: item.MINUTES || '',
           createdDate: item.CREATED_DATE,
+          comment: item.COMMENT_TEXT || '',
           user: {
             connectOrCreate: {
               where: { bitrixId: item.USER_ID },

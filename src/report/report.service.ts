@@ -33,12 +33,14 @@ export class ReportService {
             bitrixId: true,
             minutes: true,
             createdDate: true,
+            comment: true,
             task: {
               select: {
                 title: true,
                 bitrixId: true,
                 groupBitrixId: true,
                 parentTaskId: true,
+
                 SonetGroup: { select: { bitrixId: true, title: true } },
                 ParentTask: true,
               },
@@ -124,6 +126,7 @@ export class ReportService {
             time: formatMinutesToHours(+item.minutes),
             taskId: targetTask?.bitrixId ?? '',
             taskLink: `${this.configService.get('BITRIX_DOMAIN')}/workgroups/group/${targetTask.groupBitrixId}/tasks/task/view/${item.task.bitrixId}/`,
+            comment: item.comment ?? '',
           };
 
           group.tasks.push(task);
@@ -197,9 +200,6 @@ export class ReportService {
       Date.UTC(today.getFullYear(), today.getMonth() + 1, 0),
     );
 
-    console.info('today', today);
-    console.info('firstDayCurrentMonth', firstDayCurrentMonth);
-    console.info('lastDayCurrentMonth', lastDayCurrentMonth);
     // Вычисляем первый и последний день прошлого месяца
     const firstDayPrevMonth = new Date(
       Date.UTC(today.getFullYear(), today.getMonth() - 1, 1),
