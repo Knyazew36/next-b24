@@ -12,7 +12,7 @@ export class AppCron {
 
   // @Cron('*/2 * * * *')
   async getDataFromBD() {
-    this.sharedService.createUpdateBitrixBD(new Date());
+    // this.sharedService.createUpdateBitrixBD(new Date());
     await this.appService.getDataFromBD();
   }
 }

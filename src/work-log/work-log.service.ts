@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { IElapsedItem } from './type/elapsedItem.type';
+import { LAST_YEAR_ISO_DATE } from 'src/constants';
 
 @Injectable()
 export class WorkLogService {
@@ -15,7 +16,7 @@ export class WorkLogService {
 
   async fetchAndSaveElapsedItems(): Promise<void> {
     console.info('fetchAndSaveElapsedItems started');
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}task.elapseditem.getlist`;
+    const apiUrl = `${this.configService.get('BITRIX_WEBHOOK')}task.elapseditem.getlist`;
     let start = 1;
     let hasMore = true;
 
@@ -26,7 +27,7 @@ export class WorkLogService {
             CREATED_DATE: 'desc',
           },
           FILTER: {
-            '>CREATED_DATE': '2024-11-10T13:51:09+03:00',
+            '>CREATED_DATE': LAST_YEAR_ISO_DATE(),
           },
           SELECT: [],
           PARAMS: {
@@ -54,9 +55,7 @@ export class WorkLogService {
       await this.prisma.elapsedItem.upsert({
         where: { bitrixId: item.ID },
         update: {
-          bitrixId: item.ID,
           minutes: item.MINUTES || '',
-          createdDate: item.CREATED_DATE,
           user: {
             connectOrCreate: {
               where: { bitrixId: item.USER_ID },

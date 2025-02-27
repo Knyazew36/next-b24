@@ -95,8 +95,9 @@ model SonetGroup {
 }
 
 model Service {
-  id             Int      @id @default(autoincrement())
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  updateBitrixBD DateTime
+  id                 Int       @id @default(1)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  lastUpdateBitrixBD DateTime?
+  statusBD           String?
 }

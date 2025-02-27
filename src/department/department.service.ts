@@ -15,7 +15,7 @@ export class DepartmentService {
   ) {}
 
   async getDepartmentFromBitrix() {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}department.get`;
+    const apiUrl = `${this.configService.get('BITRIX_WEBHOOK')}department.get`;
 
     try {
       let start = 0;

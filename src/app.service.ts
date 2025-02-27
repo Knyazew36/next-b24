@@ -18,6 +18,11 @@ export class AppService {
   ) {}
 
   async getDataFromBD() {
+    await this.prisma.service.upsert({
+      where: { id: 1 },
+      update: { statusBD: 'loading' },
+      create: { id: 1, statusBD: 'loading' },
+    });
     // await this.prisma.elapsedItem.deleteMany({});
     // await this.prisma.task.deleteMany({});
     // await this.prisma.user.deleteMany({});
@@ -29,6 +34,10 @@ export class AppService {
     await this.sonetGroupServie.getSonetGroup();
     await this.taskService.getTasks();
     await this.workLogService.fetchAndSaveElapsedItems();
+    await this.prisma.service.update({
+      where: { id: 1 },
+      data: { statusBD: 'ready', lastUpdateBitrixBD: new Date() },
+    });
     return 'getDataFromBD Done';
   }
 

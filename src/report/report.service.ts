@@ -5,66 +5,16 @@ import * as dayjs from 'dayjs';
 import { eachDayOfInterval, format, isWeekend } from 'date-fns';
 import { formatMinutesToHours } from 'src/utils';
 import { formatDate } from 'src/utils/formatDate';
+import { SharedService } from 'src/shared/shared.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ReportService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  private generateDateRangeWithDateFns(startDate: string, endDate: string) {
-    console.info('startDate gene', startDate);
-    console.info('endDate gene', endDate);
-    return eachDayOfInterval({
-      start: new Date(startDate),
-      end: new Date(endDate),
-    }).map((date) => ({
-      date: format(date, 'yyyy-MM-dd'),
-      month: date.getMonth() + 1,
-      isWeekend: isWeekend(date),
-    }));
-  }
-
-  private generateDateFilters = () => {
-    const today = new Date();
-    const formatDate = (date) => date.toISOString().split('T')[0];
-
-    const dateRanges = [
-      {
-        label: 'Текущий месяц',
-        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth(), 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0))}`,
-      },
-      {
-        label: 'Прошлый месяц',
-        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth(), 0))}`,
-      },
-      {
-        label: 'Текущая неделя',
-        value: (() => {
-          const start = new Date(today);
-          start.setDate(today.getDate() - today.getDay() + 1);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
-        })(),
-      },
-      {
-        label: 'Прошлая неделя',
-        value: (() => {
-          const start = new Date(today);
-          start.setDate(today.getDate() - today.getDay() - 6);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
-        })(),
-      },
-    ];
-
-    return dateRanges;
-  };
-
-  private getDateUpdateBD = async (): Promise<string> => {
-    const record = await this.prisma.service.findUnique({ where: { id: 1 } });
-    return `Последнее обновление: ${formatDate(record.updateBitrixBD)}`;
-  };
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sharedService: SharedService,
+    private readonly configService: ConfigService,
+  ) {}
 
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
     const users = await this.prisma.user.findMany({
@@ -106,6 +56,8 @@ export class ReportService {
   }
 
   async getReport(body: IGetReportBody) {
+    if (!(await this.checkStatusBd())) return { statusBD: 'loading' };
+
     const from = body?.dateStart
       ? dayjs(body.dateStart).startOf('day').toISOString()
       : dayjs().subtract(1, 'month').startOf('day').toISOString();
@@ -169,7 +121,7 @@ export class ReportService {
             title: taskTitle,
             time: formatMinutesToHours(+item.minutes),
             taskId: targetTask?.bitrixId ?? '',
-            taskLink: `https://cloudmill.bitrix24.ru/workgroups/group/${targetTask.groupBitrixId}/tasks/task/view/${item.task.bitrixId}/`,
+            taskLink: `${this.configService.get('BITRIX_DOMAIN')}/workgroups/group/${targetTask.groupBitrixId}/tasks/task/view/${item.task.bitrixId}/`,
           };
 
           group.tasks.push(task);
@@ -211,4 +163,64 @@ export class ReportService {
 
     return { data: filtered, dateRange, dateFilters, from, to, updateDate };
   }
+
+  private async checkStatusBd() {
+    const record = await this.prisma.service.findUnique({ where: { id: 1 } });
+    console.log('checkStatusBd record.statusBD', record.statusBD);
+    return record.statusBD === 'ready';
+  }
+
+  private generateDateRangeWithDateFns(startDate: string, endDate: string) {
+    return eachDayOfInterval({
+      start: new Date(startDate),
+      end: new Date(endDate),
+    }).map((date) => ({
+      date: format(date, 'yyyy-MM-dd'),
+      month: date.getMonth() + 1,
+      isWeekend: isWeekend(date),
+    }));
+  }
+
+  private generateDateFilters = () => {
+    const today = new Date();
+    const formatDate = (date) => date.toISOString().split('T')[0];
+
+    const dateRanges = [
+      {
+        label: 'Текущий месяц',
+        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth(), 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0))}`,
+      },
+      {
+        label: 'Прошлый месяц',
+        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth(), 0))}`,
+      },
+      {
+        label: 'Текущая неделя',
+        value: (() => {
+          const start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() + 1);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
+        })(),
+      },
+      {
+        label: 'Прошлая неделя',
+        value: (() => {
+          const start = new Date(today);
+          start.setDate(today.getDate() - today.getDay() - 6);
+          const end = new Date(start);
+          end.setDate(start.getDate() + 6);
+          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
+        })(),
+      },
+    ];
+
+    return dateRanges;
+  };
+
+  private getDateUpdateBD = async (): Promise<string> => {
+    const record = await this.prisma.service.findUnique({ where: { id: 1 } });
+    return `Последнее обновление: ${record.lastUpdateBitrixBD ? formatDate(record.lastUpdateBitrixBD, 'DD.MM.YYYY HH:mm:ss') : 'Не обновлялась'}`;
+  };
 }

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { ISonetGroup } from './type/sonetgroup.type';
+import { LAST_YEAR_ISO_DATE } from 'src/constants';
 
 @Injectable()
 export class SonetgroupService {
@@ -14,7 +15,7 @@ export class SonetgroupService {
   ) {}
 
   private async fetchAndSaveSonetGroup(): Promise<void> {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}sonet_group.get`;
+    const apiUrl = `${this.configService.get('BITRIX_WEBHOOK')}sonet_group.get`;
     let start = 0;
     let hasMore = true;
 
@@ -22,7 +23,7 @@ export class SonetgroupService {
       const response = await lastValueFrom(
         this.httpService.post<{ result: ISonetGroup[] }>(apiUrl, {
           ORDER: { DATE_CREATE: 'DESC' },
-          FILTER: { '>DATE_CREATE': '2024-01-06T16:27:51+03:00' },
+          FILTER: { '>DATE_CREATE': LAST_YEAR_ISO_DATE() },
           IS_ADMIN: 'Y',
           start: start,
           limit: 50,

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom } from 'rxjs';
 import { PrismaService } from 'src/prisma.service';
 import { ITask } from './type/task.type';
+import { LAST_YEAR_ISO_DATE } from 'src/constants';
 
 interface TaskWithParentTask {
   parentId: string;
@@ -22,7 +23,7 @@ export class TaskService {
   private taskWithParentTask: TaskWithParentTask[] = [];
 
   private async fetchAndSaveTasks(): Promise<void> {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}tasks.task.list`;
+    const apiUrl = `${this.configService.get('BITRIX_WEBHOOK')}tasks.task.list`;
     let start = 0;
     let hasMore = true;
 
@@ -32,7 +33,7 @@ export class TaskService {
       const response = await lastValueFrom(
         this.httpService.post<{ result: { tasks: ITask[] } }>(resUrl, {
           filter: {
-            '>CREATED_DATE': '2024-02-10T13:51:09+03:00',
+            '>CREATED_DATE': LAST_YEAR_ISO_DATE(),
           },
         }),
       );
@@ -48,7 +49,6 @@ export class TaskService {
       hasMore = tasks.length >= 50;
       if (hasMore) start += 50;
     }
-    console.log('taskWithParentTask', this.taskWithParentTask);
     await this.linkTaskToTask(this.taskWithParentTask);
   }
 
@@ -61,8 +61,25 @@ export class TaskService {
         });
       }
 
-      await this.prisma.task.create({
-        data: {
+      await this.prisma.task.upsert({
+        where: {
+          bitrixId: task.id,
+        },
+        update: {
+          title: task.title || '',
+          description: task.description || '',
+          groupBitrixId: task.groupId || '',
+          bitrixParentTaskId: task.parentId || null,
+          SonetGroup: {
+            connectOrCreate: {
+              where: { bitrixId: task.groupId },
+              create: {
+                bitrixId: task.groupId,
+              },
+            },
+          },
+        },
+        create: {
           title: task.title || '',
           bitrixId: task.id,
           createdDate: task.createdDate || '',

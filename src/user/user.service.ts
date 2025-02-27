@@ -15,7 +15,7 @@ export class UserService {
   ) {}
 
   async fetchAndSaveUsers() {
-    const apiUrl = `${this.configService.get('BITRIX_DOMAIN')}user.get`;
+    const apiUrl = `${this.configService.get('BITRIX_WEBHOOK')}user.get`;
 
     try {
       let start = 0;
