@@ -1,18 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { AppService } from './app.service';
-import { SharedService } from './shared/shared.service';
 
 @Injectable()
 export class AppCron {
-  constructor(
-    private readonly appService: AppService,
-    private readonly sharedService: SharedService,
-  ) {}
+  constructor(private readonly appService: AppService) {}
 
-  // @Cron('*/2 * * * *')
+  @Cron('0 * * * *')
   async getDataFromBD() {
-    // this.sharedService.createUpdateBitrixBD(new Date());
     await this.appService.getDataFromBD();
   }
 }

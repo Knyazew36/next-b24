@@ -23,7 +23,7 @@ export class SonetgroupService {
       const response = await lastValueFrom(
         this.httpService.post<{ result: ISonetGroup[] }>(apiUrl, {
           ORDER: { DATE_CREATE: 'DESC' },
-          FILTER: { '>DATE_CREATE': LAST_YEAR_ISO_DATE() },
+          FILTER: {},
           IS_ADMIN: 'Y',
           start: start,
           limit: 50,

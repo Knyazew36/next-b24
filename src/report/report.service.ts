@@ -4,10 +4,9 @@ import { IGetReportBody } from './type/getReport.type';
 import * as dayjs from 'dayjs';
 import { eachDayOfInterval, format, isWeekend } from 'date-fns';
 import { formatMinutesToHours } from 'src/utils';
-import { formatDate } from 'src/utils/formatDate';
 import { SharedService } from 'src/shared/shared.service';
 import { ConfigService } from '@nestjs/config';
-
+import { ru } from 'date-fns/locale';
 @Injectable()
 export class ReportService {
   constructor(
@@ -17,6 +16,9 @@ export class ReportService {
   ) {}
 
   async getFromBd({ dateFrom, dateTo }: { dateFrom: string; dateTo: string }) {
+    console.info('dateFrom', dateFrom);
+    console.info('dateTo', dateTo);
+
     const users = await this.prisma.user.findMany({
       orderBy: { departmentIds: 'asc' },
       select: {
@@ -176,6 +178,7 @@ export class ReportService {
       end: new Date(endDate),
     }).map((date) => ({
       date: format(date, 'yyyy-MM-dd'),
+      formattedDate: format(date, 'd MMM', { locale: ru }), // Добавлено поле с форматом "27 янв"
       month: date.getMonth() + 1,
       isWeekend: isWeekend(date),
     }));
@@ -183,51 +186,63 @@ export class ReportService {
 
   private generateDateFilters = () => {
     const today = new Date();
-    const formatDate = (date) => date.toISOString().split('T')[0];
+    const formatDate = (date: Date) => date.toISOString().split('T')[0];
 
-    const dateRanges = [
+    // Получаем первый и последний день текущего месяца
+    const firstDayCurrentMonth = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), 1),
+    );
+
+    const lastDayCurrentMonth = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth() + 1, 0),
+    );
+
+    console.info('today', today);
+    console.info('firstDayCurrentMonth', firstDayCurrentMonth);
+    console.info('lastDayCurrentMonth', lastDayCurrentMonth);
+    // Вычисляем первый и последний день прошлого месяца
+    const firstDayPrevMonth = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth() - 1, 1),
+    );
+    const lastDayPrevMonth = new Date(
+      Date.UTC(today.getFullYear(), today.getMonth(), 0),
+    ); // 0-й день текущего месяца = последний день прошлого
+
+    // Вычисляем текущую неделю (понедельник - воскресенье)
+    const startCurrentWeek = new Date(today);
+    startCurrentWeek.setDate(today.getDate() - today.getDay() + 1); // Первый день недели (понедельник)
+    const endCurrentWeek = new Date(startCurrentWeek);
+    endCurrentWeek.setDate(startCurrentWeek.getDate() + 6); // Последний день недели (воскресенье)
+
+    // Вычисляем прошлую неделю (понедельник - воскресенье)
+    const startPrevWeek = new Date(startCurrentWeek);
+    startPrevWeek.setDate(startCurrentWeek.getDate() - 7);
+    const endPrevWeek = new Date(startPrevWeek);
+    endPrevWeek.setDate(startPrevWeek.getDate() + 6);
+
+    return [
       {
         label: 'Текущий месяц',
-        value: `dateStart=${formatDate(new Date(today.getFullYear(), today.getMonth(), 1))}&dateEnd=${formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0))}`,
+        value: `dateStart=${formatDate(firstDayCurrentMonth)}&dateEnd=${formatDate(lastDayCurrentMonth)}`,
       },
       {
         label: 'Прошлый месяц',
-        value: (() => {
-          const prevMonth = today.getMonth() - 1;
-          const prevYear = today.getFullYear();
-          const firstDayPrevMonth = new Date(prevYear, prevMonth, 1); // 1-е число прошлого месяца
-          const lastDayPrevMonth = new Date(prevYear, prevMonth + 1, 0); // Последний день прошлого месяца
-
-          return `dateStart=${formatDate(firstDayPrevMonth)}&dateEnd=${formatDate(lastDayPrevMonth)}`;
-        })(),
+        value: `dateStart=${formatDate(firstDayPrevMonth)}&dateEnd=${formatDate(lastDayPrevMonth)}`,
       },
       {
         label: 'Текущая неделя',
-        value: (() => {
-          const start = new Date(today);
-          start.setDate(today.getDate() - today.getDay() + 1);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
-        })(),
+        value: `dateStart=${formatDate(startCurrentWeek)}&dateEnd=${formatDate(endCurrentWeek)}`,
       },
       {
         label: 'Прошлая неделя',
-        value: (() => {
-          const start = new Date(today);
-          start.setDate(today.getDate() - today.getDay() - 6);
-          const end = new Date(start);
-          end.setDate(start.getDate() + 6);
-          return `dateStart=${formatDate(start)}&dateEnd=${formatDate(end)}`;
-        })(),
+        value: `dateStart=${formatDate(startPrevWeek)}&dateEnd=${formatDate(endPrevWeek)}`,
       },
     ];
-
-    return dateRanges;
   };
 
   private getDateUpdateBD = async (): Promise<string> => {
     const record = await this.prisma.service.findUnique({ where: { id: 1 } });
-    return `Последнее обновление: ${record.lastUpdateBitrixBD ? formatDate(record.lastUpdateBitrixBD, 'DD.MM.YYYY HH:mm:ss') : 'Не обновлялась'}`;
+
+    return `Последнее обновление: ${format(record.lastUpdateBitrixBD, 'd MMM HH:mm', { locale: ru })}`;
   };
 }
